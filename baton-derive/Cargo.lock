@@ -42,17 +42,11 @@ dependencies = [
 name = "baton"
 version = "0.1.0"
 dependencies = [
- "baton-derive",
  "futures",
- "tokio",
-]
-
-[[package]]
-name = "baton-derive"
-version = "0.1.0"
-dependencies = [
+ "proc-macro2",
  "quote",
  "syn",
+ "tokio",
 ]
 
 [[package]]
