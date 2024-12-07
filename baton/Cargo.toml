@@ -3,6 +3,12 @@
 name = "baton"
 version = "0.1.0"
 edition = "2021"
+description = "A simple channel for receiving updates per field"
+authors = ["Luke Curley"]
+repository = "https://github.com/kixelated/baton"
+license = "MIT OR Apache-2.0"
+
+categories = ["asynchronous"]
 
 [features]
 default = ["derive"]
@@ -10,7 +16,7 @@ derive = ["dep:baton-derive"]
 
 [dependencies]
 tokio = { version = "1", features = ["sync"], default-features = false }
-baton-derive = { path = "../baton-derive", optional = true }
+baton-derive = { path = "../baton-derive", version = "0.1", optional = true }
 
 [dev-dependencies]
 futures = "0.3"

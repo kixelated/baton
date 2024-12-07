@@ -3,6 +3,13 @@ name = "baton-derive"
 version = "0.1.0"
 edition = "2021"
 
+description = "A derive macro that generates a baton per field"
+authors = ["Luke Curley"]
+repository = "https://github.com/kixelated/baton"
+license = "MIT OR Apache-2.0"
+
+categories = ["asynchronous"]
+
 [lib]
 proc-macro = true
 
