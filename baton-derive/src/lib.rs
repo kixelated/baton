@@ -36,6 +36,7 @@ pub fn derive_baton(input: TokenStream) -> TokenStream {
 
     // Extract the name of the struct
     let base_name = input.ident;
+    let vis = input.vis;
 
     // Define names for generated send/recv structs
     let send_name = syn::Ident::new(&format!("{}Send", base_name), base_name.span());
@@ -95,11 +96,11 @@ pub fn derive_baton(input: TokenStream) -> TokenStream {
 
     // Generate the output tokens
     let expanded = quote! {
-        pub struct #send_name {
+        #vis struct #send_name {
             #(#send_fields)*
         }
 
-        pub struct #recv_name {
+        #vis struct #recv_name {
             #(#recv_fields)*
         }
 
