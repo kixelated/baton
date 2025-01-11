@@ -6,18 +6,13 @@ use crate::State;
 /// Returns or waits for each update, potentially skipping them if too slow.
 pub struct Recv<T> {
     state: Arc<Mutex<State<T>>>,
-    latest: T,
-    seen: bool,
+    init: Option<T>,
 }
 
 impl<T> Recv<T> {
     pub(crate) fn new(state: Arc<Mutex<State<T>>>) -> Self {
-        let latest = state.lock().unwrap().take().unwrap();
-        Self {
-            latest,
-            state,
-            seen: false,
-        }
+        let init = state.lock().unwrap().take();
+        Self { init, state }
     }
 
     /// Return or wait for a new value.
@@ -25,21 +20,16 @@ impl<T> Recv<T> {
     ///
     /// This only consumes the latest value, so some values may be skipped.
     /// If you want every value, use one of the many channel implementations.
-    pub async fn recv(&mut self) -> Option<&T> {
-        if !self.seen {
-            self.seen = true;
-            return Some(&self.latest);
+    pub async fn recv(&mut self) -> Option<T> {
+        if let Some(init) = self.init.take() {
+            return Some(init);
         }
 
         loop {
             let notify = {
                 let mut state = self.state.lock().unwrap();
                 match state.recv() {
-                    Ok(value) => {
-                        self.latest = value;
-                        self.seen = true;
-                        return Some(&self.latest);
-                    }
+                    Ok(value) => return Some(value),
                     Err(Some(notify)) => notify,
                     Err(None) => return None,
                 }
@@ -47,14 +37,6 @@ impl<T> Recv<T> {
 
             notify.notified().await;
         }
-    }
-
-    /// Return the latest value returned by [Self::recv].
-    ///
-    /// NOTE: If [Self::recv] has not been called yet, then this will return the initial value.
-    /// I think that's better behavior than returning None, right?
-    pub fn latest(&self) -> &T {
-        &self.latest
     }
 }
 

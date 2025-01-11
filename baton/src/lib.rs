@@ -27,7 +27,7 @@ mod derive;
 pub use derive::*;
 
 /// Create a new channel with a [Send] and [Recv] half.
-/// This is a simple channel that only keeps the latest value.
+/// This is a simple channel with no back-pressure and an initial value.
 pub fn channel<T: Clone>(value: T) -> (Send<T>, Recv<T>) {
     let state = Arc::new(Mutex::new(State::new(value)));
     (Send::new(state.clone()), Recv::new(state))
