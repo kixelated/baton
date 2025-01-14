@@ -61,7 +61,7 @@ mod test {
         .baton();
 
         // Receive the default values first.
-        assert_eq!(recv.field1.recv().now_or_never().unwrap().unwrap(), 42);
+        assert_eq!(recv.field1.recv().now_or_never().unwrap().unwrap(), &42);
         assert_eq!(recv.field2.recv().now_or_never().unwrap().unwrap(), "hello");
 
         // We block if we try to receive again.
@@ -75,7 +75,7 @@ mod test {
         // Overwrite one of them before receiving.
         send.field1.send(420).ok();
 
-        assert_eq!(recv.field1.recv().now_or_never().unwrap().unwrap(), 420);
+        assert_eq!(recv.field1.recv().now_or_never().unwrap().unwrap(), &420);
         assert_eq!(recv.field2.recv().now_or_never().unwrap().unwrap(), "world");
 
         // Drop the sender to close the channel.
