@@ -2,48 +2,46 @@ use std::sync::Arc;
 
 use tokio::sync::Notify;
 
-pub(crate) struct State<T> {
-    latest: Option<T>,
+pub(crate) struct State<T: Clone> {
+    value: T,
+    epoch: usize,
     notify: Arc<Notify>,
     closed: bool,
 }
 
-impl<T> State<T> {
+impl<T: Clone> State<T> {
     pub fn new(value: T) -> Self {
         Self {
-            latest: Some(value),
+            value,
+            epoch: 0,
             notify: Default::default(),
             closed: false,
         }
     }
 
-    pub fn recv(&mut self) -> Result<T, Option<Arc<Notify>>> {
-        if let Some(latest) = self.latest.take() {
-            Ok(latest)
+    pub fn set(&mut self, value: T) {
+        self.value = value;
+        self.epoch += 1;
+        self.notify.notify_waiters();
+    }
+
+    pub fn next(&mut self, epoch: usize) -> Result<(usize, T), Option<Arc<Notify>>> {
+        if self.epoch > epoch {
+            let value = self.value.clone();
+            Ok((self.epoch, value))
         } else if self.closed {
-            Err(None)
+            return Err(None);
         } else {
             Err(Some(self.notify.clone()))
         }
     }
 
-    pub fn send(&mut self, value: T) -> Result<(), T> {
-        if self.closed {
-            return Err(value);
-        }
-
-        self.latest = Some(value);
-        self.notify.notify_one();
-
-        Ok(())
-    }
-
-    pub fn take(&mut self) -> Option<T> {
-        self.latest.take()
+    pub fn get(&self) -> T {
+        self.value.clone()
     }
 
     pub fn close(&mut self) {
         self.closed = true;
-        self.notify.notify_one();
+        self.notify.notify_waiters();
     }
 }

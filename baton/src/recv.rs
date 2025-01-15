@@ -4,41 +4,30 @@ use crate::State;
 
 /// The receiving half.
 /// Returns or waits for each update, potentially skipping them if too slow.
-pub struct Recv<T> {
+#[derive(Clone)]
+pub struct Recv<T: Clone> {
     state: Arc<Mutex<State<T>>>,
-    latest: T,
-    seen: bool,
+    epoch: usize,
 }
 
-impl<T> Recv<T> {
+impl<T: Clone> Recv<T> {
     pub(crate) fn new(state: Arc<Mutex<State<T>>>) -> Self {
-        let latest = state.lock().unwrap().take().unwrap();
-        Self {
-            latest,
-            state,
-            seen: false,
-        }
+        Self { state, epoch: 0 }
     }
 
-    /// Return or wait for a new value.
+    /// Wait for an unseen value, not including the initial value.
     /// Returns [None] when the [Send] half is dropped with no new value.
     ///
     /// This only consumes the latest value, so some values may be skipped.
     /// If you want every value, use one of the many channel implementations.
-    pub async fn recv(&mut self) -> Option<&T> {
-        if !self.seen {
-            self.seen = true;
-            return Some(&self.latest);
-        }
-
+    pub async fn next(&mut self) -> Option<T> {
         loop {
             let notify = {
                 let mut state = self.state.lock().unwrap();
-                match state.recv() {
-                    Ok(value) => {
-                        self.latest = value;
-                        self.seen = true;
-                        return Some(&self.latest);
+                match state.next(self.epoch) {
+                    Ok((epoch, value)) => {
+                        self.epoch = epoch;
+                        return Some(value);
                     }
                     Err(Some(notify)) => notify,
                     Err(None) => return None,
@@ -49,17 +38,8 @@ impl<T> Recv<T> {
         }
     }
 
-    /// Return the latest value returned by [Self::recv].
-    ///
-    /// NOTE: If [Self::recv] has not been called yet, then this will return the initial value.
-    /// I think that's better behavior than returning None, right?
-    pub fn latest(&self) -> &T {
-        &self.latest
-    }
-}
-
-impl<T> Drop for Recv<T> {
-    fn drop(&mut self) {
-        self.state.lock().unwrap().close();
+    /// Return the latest value without waiting or marking it as seen.
+    pub fn get(&self) -> T {
+        self.state.lock().unwrap().get()
     }
 }
