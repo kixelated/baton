@@ -16,7 +16,7 @@ derive = ["dep:baton-derive"]
 
 [dependencies]
 tokio = { version = "1", features = ["sync"], default-features = false }
-baton-derive = { path = "../baton-derive", version = "0.1.2", optional = true }
+baton-derive = { path = "../baton-derive", version = "0.2", optional = true }
 
 [dev-dependencies]
 futures = "0.3"
