@@ -11,7 +11,6 @@
 // Required for derive to work.
 extern crate self as baton;
 
-mod closed;
 mod recv;
 mod send;
 mod state;
@@ -21,7 +20,6 @@ use std::sync::{Arc, Mutex};
 pub use recv::*;
 pub use send::*;
 
-pub(crate) use closed::*;
 pub(crate) use state::*;
 
 #[cfg(feature = "derive")]

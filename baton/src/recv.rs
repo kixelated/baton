@@ -1,33 +1,18 @@
-use std::{
-    ops::Deref,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
-use crate::{Closed, State};
+use crate::State;
 
 /// The receiving half.
 /// Returns or waits for each update, potentially skipping them if too slow.
 #[derive(Clone)]
-pub struct Recv<T> {
+pub struct Recv<T: Clone> {
     state: Arc<Mutex<State<T>>>,
-    latest: Arc<T>,
     epoch: usize,
-
-    // Close when all (cloned) receivers are dropped.
-    _closed: Arc<Closed<T>>,
 }
 
-impl<T> Recv<T> {
+impl<T: Clone> Recv<T> {
     pub(crate) fn new(state: Arc<Mutex<State<T>>>) -> Self {
-        let latest = state.lock().unwrap().value();
-        let _closed = Closed::new(state.clone());
-
-        Self {
-            latest,
-            state,
-            epoch: 0,
-            _closed,
-        }
+        Self { state, epoch: 0 }
     }
 
     /// Wait for an unseen value, not including the initial value.
@@ -35,15 +20,14 @@ impl<T> Recv<T> {
     ///
     /// This only consumes the latest value, so some values may be skipped.
     /// If you want every value, use one of the many channel implementations.
-    pub async fn recv(&mut self) -> Option<&T> {
+    pub async fn next(&mut self) -> Option<T> {
         loop {
             let notify = {
                 let mut state = self.state.lock().unwrap();
-                match state.recv(self.epoch) {
+                match state.next(self.epoch) {
                     Ok((epoch, value)) => {
                         self.epoch = epoch;
-                        self.latest = value;
-                        return Some(self.latest.as_ref());
+                        return Some(value);
                     }
                     Err(Some(notify)) => notify,
                     Err(None) => return None,
@@ -53,12 +37,9 @@ impl<T> Recv<T> {
             notify.notified().await;
         }
     }
-}
 
-impl<T> Deref for Recv<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.latest
+    /// Return the latest value without waiting or marking it as seen.
+    pub fn get(&self) -> T {
+        self.state.lock().unwrap().get()
     }
 }

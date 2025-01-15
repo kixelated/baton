@@ -18,6 +18,7 @@ struct MyStructSend {
     pub field2: baton::Send<String>,
 }
 
+#[derive(Clone)]
 struct MyStructRecv {
     pub field1: baton::Recv<i32>,
     pub field2: baton::Recv<String>,
@@ -100,6 +101,7 @@ pub fn derive_baton(input: TokenStream) -> TokenStream {
             #(#send_fields)*
         }
 
+        #[derive(Clone)]
         #vis struct #recv_name {
             #(#recv_fields)*
         }

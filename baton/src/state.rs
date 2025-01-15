@@ -2,35 +2,30 @@ use std::sync::Arc;
 
 use tokio::sync::Notify;
 
-pub(crate) struct State<T> {
-    value: Arc<T>,
+pub(crate) struct State<T: Clone> {
+    value: T,
     epoch: usize,
     notify: Arc<Notify>,
     closed: bool,
 }
 
-impl<T> State<T> {
+impl<T: Clone> State<T> {
     pub fn new(value: T) -> Self {
         Self {
-            value: Arc::new(value),
+            value,
             epoch: 0,
             notify: Default::default(),
             closed: false,
         }
     }
 
-    pub fn send(&mut self, value: T) -> Result<Arc<T>, T> {
-        if self.closed {
-            return Err(value);
-        }
-
-        self.value = Arc::new(value);
+    pub fn set(&mut self, value: T) {
+        self.value = value;
+        self.epoch += 1;
         self.notify.notify_waiters();
-
-        Ok(self.value.clone())
     }
 
-    pub fn recv(&mut self, epoch: usize) -> Result<(usize, Arc<T>), Option<Arc<Notify>>> {
+    pub fn next(&mut self, epoch: usize) -> Result<(usize, T), Option<Arc<Notify>>> {
         if self.epoch > epoch {
             let value = self.value.clone();
             Ok((self.epoch, value))
@@ -41,7 +36,7 @@ impl<T> State<T> {
         }
     }
 
-    pub fn value(&self) -> Arc<T> {
+    pub fn get(&self) -> T {
         self.value.clone()
     }
 

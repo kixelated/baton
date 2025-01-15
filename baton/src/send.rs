@@ -1,42 +1,35 @@
-use std::{
-    ops::Deref,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
-use crate::State;
+use crate::{Recv, State};
 
 /// The sending half.
 /// Sends new values to the receiving half, potentially dropping them if too fast.
-#[derive(Clone)]
-pub struct Send<T> {
+pub struct Send<T: Clone> {
     state: Arc<Mutex<State<T>>>,
-    latest: Arc<T>,
 }
 
-impl<T> Send<T> {
+impl<T: Clone> Send<T> {
     pub(crate) fn new(state: Arc<Mutex<State<T>>>) -> Self {
-        let latest = state.lock().unwrap().value();
-        Self { latest, state }
+        Self { state }
     }
 
     /// Set a new value.
-    ///
-    /// Returns [Err] if the [crate::Recv] half is dropped.
-    pub fn send(&mut self, value: T) -> Result<(), T> {
-        self.latest = self.state.lock().unwrap().send(value)?;
-        Ok(())
+    pub fn set(&mut self, value: T) {
+        self.state.lock().unwrap().set(value);
+    }
+
+    /// Return the latest value.
+    pub fn get(&self) -> T {
+        self.state.lock().unwrap().get()
+    }
+
+    /// Create a new receiving half.
+    pub fn recv(&self) -> Recv<T> {
+        Recv::new(self.state.clone())
     }
 }
 
-impl<T> Deref for Send<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.latest
-    }
-}
-
-impl<T> Drop for Send<T> {
+impl<T: Clone> Drop for Send<T> {
     fn drop(&mut self) {
         self.state.lock().unwrap().close();
     }
