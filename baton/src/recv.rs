@@ -4,14 +4,12 @@ use tokio::sync::watch;
 /// Returns or waits for each update, potentially skipping them if too slow.
 #[derive(Clone)]
 pub struct Recv<T: Clone> {
-    latest: T,
     watch: watch::Receiver<T>,
 }
 
 impl<T: Clone> Recv<T> {
     pub(crate) fn new(watch: watch::Receiver<T>) -> Self {
-        let latest = watch.borrow().clone();
-        Self { latest, watch }
+        Self { watch }
     }
 
     /// Wait for an unseen value, not including the initial value.
@@ -19,14 +17,13 @@ impl<T: Clone> Recv<T> {
     ///
     /// This only returns the latest value so some values may be skipped.
     /// If you want every value, use one of the many channel implementations.
-    pub async fn next(&mut self) -> Option<&T> {
+    pub async fn next(&mut self) -> Option<T> {
         self.watch.changed().await.ok()?;
-        self.latest = self.watch.borrow_and_update().clone();
-        Some(&self.latest)
+        Some(self.watch.borrow_and_update().clone())
     }
 
-    /// Return the initial value or the latest value returned by [Self::next].
-    pub fn get(&self) -> &T {
-        &self.latest
+    /// Return the current value, regardless of if it's been seen or not.
+    pub fn get(&self) -> T {
+        self.watch.borrow().clone()
     }
 }
