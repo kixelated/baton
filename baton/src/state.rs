@@ -13,7 +13,7 @@ impl<T: Clone> State<T> {
     pub fn new(value: T) -> Self {
         Self {
             value,
-            epoch: 0,
+            epoch: 1,
             notify: Default::default(),
             closed: false,
         }
@@ -24,7 +24,6 @@ impl<T: Clone> State<T> {
         self.epoch += 1;
         self.notify.notify_waiters();
     }
-
     pub fn next(&mut self, epoch: usize) -> Result<(usize, T), Option<Arc<Notify>>> {
         if self.epoch > epoch {
             let value = self.value.clone();
@@ -43,5 +42,14 @@ impl<T: Clone> State<T> {
     pub fn close(&mut self) {
         self.closed = true;
         self.notify.notify_waiters();
+    }
+}
+
+impl<T: Clone + PartialEq> State<T> {
+    pub fn set_if(&mut self, value: T) {
+        if self.value == value {
+            return;
+        }
+        self.set(value);
     }
 }

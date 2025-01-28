@@ -15,10 +15,10 @@ impl<T: Clone> Recv<T> {
         Self { state, epoch: 0 }
     }
 
-    /// Wait for an unseen value, not including the initial value.
+    /// Wait for an unseen value, including the initial value.
     /// Returns [None] when the [Send] half is dropped with no new value.
     ///
-    /// This only consumes the latest value, so some values may be skipped.
+    /// This only returns the latest value so some values may be skipped.
     /// If you want every value, use one of the many channel implementations.
     pub async fn next(&mut self) -> Option<T> {
         loop {
