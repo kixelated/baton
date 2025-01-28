@@ -97,6 +97,7 @@ pub fn derive_baton(input: TokenStream) -> TokenStream {
 
     // Generate the output tokens
     let expanded = quote! {
+        #[derive(Clone)]
         #vis struct #send_name {
             #(#send_fields)*
         }

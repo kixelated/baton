@@ -1,45 +1,29 @@
-use std::sync::{Arc, Mutex};
-
-use crate::State;
+use tokio::sync::watch;
 
 /// The receiving half.
 /// Returns or waits for each update, potentially skipping them if too slow.
 #[derive(Clone)]
 pub struct Recv<T: Clone> {
-    state: Arc<Mutex<State<T>>>,
-    epoch: usize,
+    watch: watch::Receiver<T>,
 }
 
 impl<T: Clone> Recv<T> {
-    pub(crate) fn new(state: Arc<Mutex<State<T>>>) -> Self {
-        Self { state, epoch: 0 }
+    pub(crate) fn new(watch: watch::Receiver<T>) -> Self {
+        Self { watch }
     }
 
     /// Wait for an unseen value, not including the initial value.
     /// Returns [None] when the [Send] half is dropped with no new value.
     ///
-    /// This only consumes the latest value, so some values may be skipped.
+    /// This only returns the latest value so some values may be skipped.
     /// If you want every value, use one of the many channel implementations.
     pub async fn next(&mut self) -> Option<T> {
-        loop {
-            let notify = {
-                let mut state = self.state.lock().unwrap();
-                match state.next(self.epoch) {
-                    Ok((epoch, value)) => {
-                        self.epoch = epoch;
-                        return Some(value);
-                    }
-                    Err(Some(notify)) => notify,
-                    Err(None) => return None,
-                }
-            };
-
-            notify.notified().await;
-        }
+        self.watch.changed().await.ok()?;
+        Some(self.watch.borrow_and_update().clone())
     }
 
-    /// Return the latest value without waiting or marking it as seen.
+    /// Return the current value, regardless of if it's been seen or not.
     pub fn get(&self) -> T {
-        self.state.lock().unwrap().get()
+        self.watch.borrow().clone()
     }
 }

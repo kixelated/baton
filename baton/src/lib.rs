@@ -13,23 +13,20 @@ extern crate self as baton;
 
 mod recv;
 mod send;
-mod state;
-
-use std::sync::{Arc, Mutex};
 
 pub use recv::*;
 pub use send::*;
-
-pub(crate) use state::*;
 
 #[cfg(feature = "derive")]
 mod derive;
 #[cfg(feature = "derive")]
 pub use derive::*;
 
+use tokio::sync::watch;
+
 /// Create a new channel with a [Send] and [Recv] half.
 /// This is a simple channel with no back-pressure and an initial value.
 pub fn channel<T: Clone>(value: T) -> (Send<T>, Recv<T>) {
-    let state = Arc::new(Mutex::new(State::new(value)));
-    (Send::new(state.clone()), Recv::new(state))
+    let (send, recv) = watch::channel(value);
+    (Send::new(send), Recv::new(recv))
 }
